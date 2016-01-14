@@ -215,19 +215,12 @@ class Mesh{
 		const auto B = RV(i.b);
 		const auto C = RV(i.c);
 		const auto D = RV(i.d);
-
-		//float rx1 = x_min + (x_max-x_min)/(z_max-z_min)*z;
-		//float ry1 = y_min + (y_max-y_min)/(z_max-z_min)*z;
 	
 		float z_min = A.z;
 		float z_max = B.z;
 
 		float rx1 = A.x + (A.x-B.x)/(A.z-B.z)*(z-z_min);
 		float ry1 = A.y + (A.y-B.y)/(A.z-B.z)*(z-z_min);
-		
-
-		//float rx2 = x_min + (x_max-x_min)/(z_max-z_min)*z;
-		//float ry2 = y_min + (y_max-y_min)/(z_max-z_min)*z;
 
 		z_min = C.z;
 		z_max = D.z;
@@ -250,10 +243,6 @@ class Mesh{
 		int facetid = 0;
 		for(const auto &f : facets){
 
-		//	std::cout << f.a << " " << RV(f.a).x << " " << RV(f.a).y << " " << RV(f.a).z << std::endl;
-		//	std::cout << f.b << " " << RV(f.b).x << " " << RV(f.b).y << " " << RV(f.b).z << std::endl;
-		//	std::cout << f.c << " " << RV(f.c).x << " " << RV(f.c).y << " " << RV(f.c).z << std::endl;
-
 			int minZVertex = f.a, midZVertex = f.b, maxZVertex = f.a;	
 			minZVertex = RV(minZVertex).z<=RV(f.b).z?minZVertex:f.b;
 			minZVertex = RV(minZVertex).z<=RV(f.c).z?minZVertex:f.c;
@@ -271,7 +260,7 @@ class Mesh{
 			else if((minZVertex == f.a && maxZVertex == f.b) || (minZVertex == f.b && maxZVertex == f.a)){
 				midZVertex = f.c;
 			}
-		//	std::cout << "minZ " << minZVertex << " midZ " << midZVertex << " maxZ " << maxZVertex << std::endl << std::endl;;
+
 			sweepQueue.push_back(sweepLineEvent(facetid,LINE_BEGIN,RV(minZVertex).z,Intersection(minZVertex,maxZVertex,minZVertex,midZVertex,LOWER)));
 			sweepQueue.push_back(sweepLineEvent(facetid,LINE_END,RV(midZVertex).z,Intersection(minZVertex,maxZVertex,minZVertex,midZVertex,LOWER)));
 			sweepQueue.push_back(sweepLineEvent(facetid,LINE_BEGIN,RV(midZVertex).z,Intersection(midZVertex,maxZVertex,minZVertex,maxZVertex,UPPER)));
@@ -280,13 +269,6 @@ class Mesh{
 		// zSort all vertices and build events
 		std::stable_sort(sweepQueue.begin(),sweepQueue.end(),sweepLineEvent::typeCompare);
 		std::stable_sort(sweepQueue.begin(),sweepQueue.end(),sweepLineEvent::zCompare);
-		//std::cout << "BUFFER SIZE " << sweepQueue.size() << std::endl;
-		
-		//for(const auto i:sweepQueue){
-		//	std::cout << (i.type?"LINE_END ":"LINE_BEGIN ") << computeId(i) << " " << i.eventZ  << std::endl;
-		//}
-		
-		//getchar();
 
 		// Move sweep line upwards in regular increments and process all events
 		float step = (zMax - zMin)/no;
@@ -300,16 +282,11 @@ class Mesh{
 				if(queuePosition == sweepQueue.end())
 					break;
 				if(queuePosition->type == LINE_BEGIN){
-					//std::cout << "inserted " << computeId(*queuePosition) << std::endl;
 					current_segments[computeId(*queuePosition)] = queuePosition->intersection;
 				}
 				else if(queuePosition->type == LINE_END){
 					if(current_segments.count(computeId(*queuePosition))){
-						//std::cout << "removed " << computeId(*queuePosition) << std::endl;
 						current_segments.erase(computeId(*queuePosition));
-					}
-					else{
-						// Should raise error but am ignoring
 					}
 				}
 				else{
@@ -318,25 +295,22 @@ class Mesh{
 				}
 				++queuePosition;
 			}
-			// std::cout << " z => " << currentZ  << ", Polygon size = " << current_segments.size() << std::endl;
 			if(current_segments.size()>0){
-				//std::cout << "------" << std::endl;
 				for(const auto seg:current_segments){
-				//	std::cout << seg.second.a << "," << seg.second.b << "," << seg.second.c << "," << seg.second.d << std::endl;
 					const auto it = intersect2(seg.second,currentZ);
-					std::cout << std::get<0>(it) << "," << std::get<1>(it) << ","  <<currentZ  << "\n" << std::get<2>(it) << "," << std::get<3>(it)<< "," << currentZ  << std::endl;
+					std::cout << std::get<0>(it) << " " << std::get<1>(it) << " "  <<currentZ  << "\n" << std::get<2>(it) << " " << std::get<3>(it)<< " " << currentZ  << std::endl;
 				}
-			//	std::cout << "------ \n" << std::endl;
-			}
-			else{
-				//std::cout << "No lines" << std::endl;
 			}
 			currentZ += step;
 		}
 	}
 };
 
-int main(){
-	Mesh mesh("sphere.stl");
-	mesh.doSweepLine(-10,10,200);
+int main(int argc, char **argv){
+	if(argc < 2){
+		std::cerr << "Usage ./main filename.stl (ASCII STLs only)" << std::endl;
+		exit(-1);
+	}
+	Mesh mesh(argv[1]);
+	mesh.doSweepLine(-10,100,200); // ZMin, ZMax, number of slices
 }
